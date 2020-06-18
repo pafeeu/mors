@@ -219,7 +219,6 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
                             (showSignalCode&&taSignal.hasFocus() ? taSignal : null)));
             int cursorPosition=0;
             if(focused != null) cursorPosition = focused.getCaretPosition();
-            System.out.println(cursorPosition);
 
             taText.setText(controller.getText());
             taMorse.setText(controller.getMorseCode());
