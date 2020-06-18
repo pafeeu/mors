@@ -36,8 +36,8 @@ public class ControlUnit {
     }
     public String getSignalCode() { return interpreter.getSignalCode(); }
 
-    public void setTextInGuiUpdater (boolean update) {
-        gui.setTextUpdater(update);
+    public boolean isCharactersOfAlphabet(String s) {
+        return interpreter.getAlphabet().isCharactersOfAlphabet(s);
     }
     public void disablePlayButtonSound(boolean disabled) {
         gui.disablePlayButtonSound(disabled);
@@ -71,7 +71,7 @@ public class ControlUnit {
     }
 
     public void playSound() {
-        setTextInGuiUpdater(false);
+        //TODO: check that there is any morse code to play
         disableListenButtonSound(true);
         disablePlayButtonSound(true);
         disableStopButtonSound(false);
@@ -79,7 +79,6 @@ public class ControlUnit {
         soundControl.play();
     }
     public void listenSound() {
-        setTextInGuiUpdater(false);
         disablePlayButtonSound(true);
         disableListenButtonSound(true);
         disableStopButtonSound(false);
@@ -90,7 +89,6 @@ public class ControlUnit {
     }
     public void stopSound() {
         soundControl.stop();
-        setTextInGuiUpdater(true);
         disablePlayButtonSound(false);
         disableListenButtonSound(false);
         disableStopButtonSound(true);

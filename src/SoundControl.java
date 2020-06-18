@@ -66,7 +66,7 @@ public class SoundControl {
 
         try {
             tdl = AudioSystem.getTargetDataLine(af);
-        } catch (LineUnavailableException e) {
+        } catch (LineUnavailableException | IllegalArgumentException e) {
             pushError("Nie można uzyskać dostępu do nagrywania dźwięku");
             controller.disableListenButtonSound(true);
             e.printStackTrace();

@@ -33,19 +33,20 @@ public class AlphabetPair {
     public static boolean isShortGap(Character c) {
         return c.equals(SHORT_GAP);
     }
+    public static boolean isCharacterOfMorseCodeOrGap(Character m) {
+        return isCharacterOfMorseCode(m) || isShortGap(m);
+    }
     public static boolean isValidMorseCodeSign(String m) {
         if(m.isEmpty()) return false;
-        for (int i=0; i<m.length(); i++) {
-            if(!isCharacterOfMorseCode(m.charAt(i))) return false;
+        for(char c: m.toCharArray()) {
+            if(!isCharacterOfMorseCode(c)) return false;
         }
         return true;
     }
     public static boolean isValidMorseCode(String m) {
         if(m.isEmpty()) return false;
-        char c;
-        for (int i=0; i<m.length(); i++) {
-            c = m.charAt(i);
-            if(!isCharacterOfMorseCode(c) && !isShortGap(c)) return false;
+        for(char c: m.toCharArray()) {
+            if(!isCharacterOfMorseCodeOrGap(c)) return false;
         }
         return true;
     }

@@ -34,13 +34,16 @@ public class Interpreter {
     public void setAlphabet(Alphabet a) {
         alphabet = a;
     }
+    public Alphabet getAlphabet() {
+        return alphabet;
+    }
     public void showAlphabet() {
         alphabet.showAlphabet();
     }
 
     //TODO: input validation
     public void setText(String text) {
-        this.text = text.toUpperCase();
+        this.text = validateText(text);
         //in case of adding special commands:
         //input must be checked about existence special commands
         //if text in [] isn't command, change it on ()
@@ -71,11 +74,19 @@ public class Interpreter {
         return signalCode;
     }
 
+    public String validateText(String text) {
+        StringBuilder s = new StringBuilder(text.toUpperCase());
+        for (int i = 0; i < s.length(); i++) {
+            if(!alphabet.isCharacterOfAlphabet(s.charAt(i))) s.deleteCharAt(i);
+        }
+        return s.toString();
+    }
     public String validateMorseCode(String morseCode) {
         StringBuilder s = new StringBuilder(morseCode);
         char c;
         for (int i = 0; i < s.length(); i++) {
             c = s.charAt(i);
+            //todo: why not static method from alhpabet pair?
             if(c!=AlphabetPair.SHORT_SIGN && c!=AlphabetPair.LONG_SIGN && c!=AlphabetPair.SHORT_GAP) s.deleteCharAt(i);
         }
         return s.toString();
@@ -83,6 +94,7 @@ public class Interpreter {
     public String validateSignalCode(String signalCode) {
         StringBuilder s = new StringBuilder(signalCode);
 
+        /*
         String[] errorSought={
                 SIGNAL_HIGH+ SIGNAL_LOW.toString().repeat(2) +SIGNAL_HIGH,
                 SIGNAL_HIGH+ SIGNAL_LOW.toString().repeat(6) +SIGNAL_HIGH,
@@ -93,15 +105,18 @@ public class Interpreter {
                 SIGNAL_HIGH+ SIGNAL_LOW.toString().repeat(7) +SIGNAL_HIGH,
                 SIGNAL_LOW+ SIGNAL_HIGH.toString().repeat(3) +SIGNAL_LOW,
                 SIGNAL_LOW+ SIGNAL_HIGH.toString().repeat(3) +SIGNAL_LOW};
+                */
 
 
         char c;
         int i, index;
         for (i = 0; i < s.length(); i++) {
             c = s.charAt(i);
+            //todo: change to isSignalChar
             if(c!=SIGNAL_HIGH && c!=SIGNAL_LOW) s.deleteCharAt(i);
         }
 
+        /*
         for (int j = 0; j < errorSought.length; j++) {
             i=0;
             while(i<s.length()) {
@@ -115,7 +130,7 @@ public class Interpreter {
         index = s.indexOf(SIGNAL_HIGH.toString());
         if (index>=0) s.delete(0, index);
         index = s.lastIndexOf(SIGNAL_HIGH.toString());
-        if (index>=0) s.delete(index+1, s.length());
+        if (index>=0) s.delete(index+1, s.length());*/
 
         return s.toString();
     }
@@ -205,5 +220,14 @@ public class Interpreter {
             i+=l;
         }
         morseCode = wynik.toString();
+    }
+    public static boolean isSignalChar(char c) {
+        return c==SIGNAL_HIGH || c==SIGNAL_LOW;
+    }
+    public static boolean isValidSignalCode(String s) {
+        for (char c: s.toCharArray()) {
+            if(!isSignalChar(c)) return false;
+        }
+        return true;
     }
 }

@@ -64,7 +64,7 @@ public class Alphabet {
         for (AlphabetPair elem: alphabetList) {
             if (elem.getMorseCode().equals(searched)) return elem.getCharacter();
         }
-        //pushError("Morse code not found: "+searched);
+        pushError("Morse code not found: "+searched);
         return null;
     }
 
@@ -175,11 +175,25 @@ public class Alphabet {
 
  */
 
+    public boolean isCharacterOfAlphabet(char c) {
+        if(AlphabetPair.isShortGap(c)) return true;
+        for (AlphabetPair el : alphabetList) {
+            if (el.getCharacter().equals(c)) return true;
+        }
+        return false;
+    }
+    public boolean isCharactersOfAlphabet(String s) {
+        for(char c: s.toCharArray()) {
+            if (!isCharacterOfAlphabet(c)) return false;
+        }
+        return true;
+    }
     public void showAlphabet() {
         StringBuilder s = new StringBuilder("Alphabet: ");
         for (AlphabetPair elem: alphabetList) {
             s.append("\n").append(elem.getCharacter()).append(" ").append(elem.getMorseCode());
         }
-        pushMessage(s.toString());
+        //pushMessage(s.toString());
+        System.out.println(s.toString());
     }
 }

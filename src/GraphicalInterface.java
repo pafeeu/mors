@@ -1,12 +1,13 @@
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import java.awt.*;
+import java.awt.event.*;
 
 
-public class GraphicalInterface implements ActionListener, ChangeListener {
+public class GraphicalInterface implements ActionListener, ChangeListener, DocumentListener {
     private ControlUnit controller=null;
     public void setController(ControlUnit controller) {
         this.controller = controller;
@@ -27,11 +28,10 @@ public class GraphicalInterface implements ActionListener, ChangeListener {
     //TODO: progress bar, controls for volume and unit length in ms
 
     boolean showSignalCode = true;
+    boolean avoidTooManyTextInputEvents = false;
     JLabel lSignal;
     JTextArea taSignal;
     JScrollPane spSignal;
-
-    boolean conditionTextUpdateListener;
 
     GraphicalInterface() {
         initialize();
@@ -42,11 +42,9 @@ public class GraphicalInterface implements ActionListener, ChangeListener {
     }
     public void show() {
         frame.setVisible(true);
-        setTextUpdater(true);
     }
     public void hide() {
         frame.setVisible(false);
-        setTextUpdater(false);
     }
     public void initialize() {
         frame = new JFrame("Morse code translator");
@@ -87,6 +85,8 @@ public class GraphicalInterface implements ActionListener, ChangeListener {
         progressBar.setMinimum(0);
 
         //setting event listeners
+        taText.getDocument().addDocumentListener(this);
+        taMorse.getDocument().addDocumentListener(this);
         spinVolume.addChangeListener(this);
         spinUnitLength.addChangeListener(this);
         spinWpm.addChangeListener(this);
@@ -114,6 +114,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener {
             taSignal = new JTextArea();
             spSignal = new JScrollPane(taSignal);
 
+            taSignal.getDocument().addDocumentListener(this);
             taSignal.setLineWrap(true);
             taSignal.setWrapStyleWord(true);
             taSignal.setFont(font);
@@ -185,46 +186,48 @@ public class GraphicalInterface implements ActionListener, ChangeListener {
             case "stop" -> controller.stopSound();
         }
     }
-    public void setTextUpdater(boolean update) {
-        if(update) {
-            conditionTextUpdateListener = true;
-            textUpdateListener();
-        } else {
-            conditionTextUpdateListener = false;
-        }
+
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+        textInput(e);
     }
-    private void textUpdateListener() {
-        new Thread(() -> {
-            String oldText="", oldMorse="";
-            String newText, newMorse;
-            //TODO disable when listening + ew add signal support
-            while (conditionTextUpdateListener) {
-                newText = taText.getText();
-                newMorse = taMorse.getText();
-                if (!newText.equals(oldText)) {
-                    controller.setText(newText);
-                    oldText = newText;
-                    oldMorse = controller.getMorseCode();
-                    setResults();
-                } else if (!newMorse.equals(oldMorse)) {
-                    controller.setMorseCode(newMorse);
-                    oldMorse = newMorse;
-                    oldText = controller.getText();
-                    setResults();
-                }
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+        textInput(e);
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        textInput(e);
+    }
+
+    private void textInput(DocumentEvent e) {
+        if(!avoidTooManyTextInputEvents) {
+            if(taText.hasFocus()) {
+                    controller.setText(taText.getText());
+            } else if(taMorse.hasFocus()) {
+                    controller.setMorseCode(taMorse.getText());
             }
-        }).start();
+        }
     }
     public void setResults() {
         SwingUtilities.invokeLater(() -> {
+            avoidTooManyTextInputEvents=true;
+            JTextArea focused = (taText.hasFocus() ? taText :
+                    (taMorse.hasFocus() ? taMorse :
+                            (showSignalCode&&taSignal.hasFocus() ? taSignal : null)));
+            int cursorPosition=0;
+            if(focused != null) cursorPosition = focused.getCaretPosition();
+            System.out.println(cursorPosition);
+
             taText.setText(controller.getText());
             taMorse.setText(controller.getMorseCode());
             if(showSignalCode) taSignal.setText(controller.getSignalCode());
+
+            if(focused != null && focused.getText().length()>cursorPosition) focused.setCaretPosition(cursorPosition);
+
+            avoidTooManyTextInputEvents=false;
         });
     }
     public void showMessage(String s) {
