@@ -110,14 +110,6 @@ public class SoundControl {
             if(c==Interpreter.SIGNAL_HIGH) sdl.write(unitOfHighSignal, 0, unitOfHighSignal.length);
             else sdl.write(unitOfLowSignal, 0, unitOfLowSignal.length);
             controller.setProgressBarVal(i);
-            /*
-            try {
-                //preload some sound at first
-                if(i>3) Thread.sleep(unitLengthInMs);
-            } catch (InterruptedException e) {
-                pushError("Błąd w odtwarzaniu dźwięku");
-                e.printStackTrace();
-            }*/
         }
 
         sdl.drain();
@@ -127,7 +119,6 @@ public class SoundControl {
         processCondition = true;
         playThread = new Thread(this::player,"player");
         playThread.start();
-        //TODO progress bar in gui
     }
     private void analyser(ArrayList<Integer> avgData) {
         int dataSize=avgData.size();
@@ -152,28 +143,42 @@ public class SoundControl {
         //avg from high signals
         int boundary = (int) Math.round(avgHigh>2 ? avgHigh*0.45 : max);
 
-        //recognize unit length
-        int possibleUnitLength=0, elemAppearances=0;
-        int appearences;
+        //recognize units length
+        int possibleLengthUnitOfHighSignal=0, appearancesHighSignal=0;
+        int possibleLengthUnitOfLowSignal=0, appearancesLowSignal=0;
+        int tempAppearencesHighSignal, tempAppearencesLowSignal;
         double approximation=0.1; //lengths of unit
         for (int el:signalsLength) {
-            if (el<3) continue;
-            appearences = 0; //0 not 1, because it count itself in loop:
+            if (el<3) continue; // filter too small lengths which can cause wrong recognizing
+            tempAppearencesHighSignal = 0;
+            tempAppearencesLowSignal = 0; //0 not 1, because it count itself in loop:
             for (int el2 : signalsLength) {
-                if (Math.abs(el2 - el) < el * approximation
-                        || Math.abs(el2 - el*3) < el * approximation
-                        || Math.abs(el2 - el*7) < el * approximation)
-                    ++appearences;
+                //TODO: when whole analyser will be merge into one loop, first check is it low or high signal, then recognize length
+                boolean nearOneLengthUnit = Math.abs(el2 - el) < el * approximation;
+                boolean nearThreeLengthsUnit = Math.abs(el2 - el*3) < el * approximation;
+                boolean nearSevenLengthUnit = Math.abs(el2 - el*7) < el * approximation;
+                //high signal
+                if (nearOneLengthUnit || nearThreeLengthsUnit)
+                    ++tempAppearencesHighSignal;
+                //low signal
+                if (nearOneLengthUnit || nearThreeLengthsUnit || nearSevenLengthUnit)
+                    ++tempAppearencesLowSignal;
             }
-            if (appearences>elemAppearances) {
-                elemAppearances = appearences;
-                possibleUnitLength = el;
+            if (tempAppearencesHighSignal>appearancesHighSignal) {
+                appearancesHighSignal = tempAppearencesHighSignal;
+                possibleLengthUnitOfHighSignal = el;
+            }
+            if (tempAppearencesLowSignal>appearancesLowSignal) {
+                appearancesLowSignal = tempAppearencesLowSignal;
+                possibleLengthUnitOfLowSignal = el;
             }
         }
-
         //if same boundary and unit length, can calculate only newest data
         int i;
-        if(previousBoundary==boundary && recognizedLengthUnitOfHighSignal ==possibleUnitLength && !preventiveRecalculate) {
+        if(previousBoundary==boundary &&
+                recognizedLengthUnitOfHighSignal==possibleLengthUnitOfHighSignal &&
+                recognizedLengthUnitOfLowSignal==possibleLengthUnitOfLowSignal &&
+                !preventiveRecalculate) {
             i = dataSize-periodOfAnalyse;
         } else {
             //System.out.println("reset the results");
@@ -181,8 +186,12 @@ public class SoundControl {
             signalsLength.clear();
             output.setLength(0);
             if(boundary>0) previousBoundary = boundary;
-            if(possibleUnitLength>0) recognizedLengthUnitOfHighSignal = possibleUnitLength;
+            if(possibleLengthUnitOfHighSignal>0) recognizedLengthUnitOfHighSignal = possibleLengthUnitOfHighSignal;
+            if(possibleLengthUnitOfLowSignal>0) recognizedLengthUnitOfLowSignal = possibleLengthUnitOfLowSignal;
             preventiveRecalculate = false;
+
+            System.out.print("\nRecognizedLengthUnitOf: HS="+recognizedLengthUnitOfHighSignal);
+            System.out.print(" LS="+recognizedLengthUnitOfLowSignal+"\n");
         }
 
         //analyse is it low or high + prepare output
@@ -192,9 +201,11 @@ public class SoundControl {
             if(high==avgData.get(i)*signalGain>boundary) lengthCounter++;
             else {
                 signalsLength.add(lengthCounter);
-                output.append((high? Interpreter.SIGNAL_HIGH: Interpreter.SIGNAL_LOW).toString()
-                        .repeat((int) Math.round((double)lengthCounter/ recognizedLengthUnitOfHighSignal)));
-
+                if(high) {
+                    output.append(Interpreter.SIGNAL_HIGH.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
+                } else {
+                    output.append(Interpreter.SIGNAL_LOW.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfLowSignal)));
+                }
                 high = !high;
                 lengthCounter=1;
             }

@@ -64,7 +64,7 @@ public class Alphabet {
         for (AlphabetPair elem: alphabetList) {
             if (elem.getMorseCode().equals(searched)) return elem.getCharacter();
         }
-        pushError("Morse code not found: "+searched);
+        //pushError("Morse code not found: "+searched);
         return null;
     }
 
