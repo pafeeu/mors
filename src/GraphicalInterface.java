@@ -16,6 +16,11 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
 
     JFrame frame;
     JPanel panel;
+    JMenuBar menuBar;
+    JMenu mSettings;
+    JLabel labSpeedUnit;
+    ButtonGroup bgSpeedUnits;
+    JRadioButtonMenuItem miSpinnersMS, miSpinnersWPM;
     JLabel labText, labMorse, labVolume, labUnitLength, labWpm;
     JTextArea taText, taMorse;
     JScrollPane spText, spMorse;
@@ -47,13 +52,19 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         frame.setVisible(false);
     }
     public void initialize() {
-        frame = new JFrame("Morse code translator");
+        frame = new JFrame("Translator kodu morsa");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //initialization
         panel = new JPanel(null);
+        menuBar = new JMenuBar();
+        mSettings = new JMenu("Ustawienia");
+        labSpeedUnit = new JLabel("Jednostka prędkości kodu morsa:");
+        bgSpeedUnits = new ButtonGroup();
+        miSpinnersMS = new JRadioButtonMenuItem("Milisekundy");
+        miSpinnersWPM = new JRadioButtonMenuItem("Słowa na minutę");
         labText = new JLabel("Tekst (znaki alfanumeryczne):");
-        labMorse = new JLabel("Kod morsa (znaki - i •):");
+        labMorse = new JLabel("Kod morsa (znaki "+AlphabetPair.LONG_SIGN+" i "+AlphabetPair.SHORT_SIGN+"):");
         labVolume = new JLabel("Głośność: ");
         labUnitLength = new JLabel("Długość jednostki (ms)");
         labWpm = new JLabel("Słów na minutę: ");
@@ -69,6 +80,16 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         butStartListen = new JButton("Słuchaj");
         butStop = new JButton("Stop");
         font = new Font(Font.MONOSPACED, Font.PLAIN, 15);
+
+        //building menu
+        menuBar.add(mSettings);
+        //miSpeedUnit.setD(false);
+        mSettings.add(labSpeedUnit);
+        miSpinnersMS.setSelected(true);
+        bgSpeedUnits.add(miSpinnersMS);
+        bgSpeedUnits.add(miSpinnersWPM);
+        mSettings.add(miSpinnersMS);
+        mSettings.add(miSpinnersWPM);
 
         //options for scroll pane's and text area's
         spText.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -170,8 +191,9 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         panel.add(butStartListen);
         panel.add(butStop);
 
-        frame.setSize(maxWidth+2*gap, tempY+gap);
-
+        frame.setSize(maxWidth+3*gap, tempY+3*gap);
+        frame.setMinimumSize(frame.getSize());
+        frame.setJMenuBar(menuBar);
         frame.setContentPane(panel);
     }
 
