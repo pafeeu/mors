@@ -1,5 +1,3 @@
-import java.util.ArrayList;
-
 public class PerformanceMeter {
     private boolean dependencyOnData;
     private int measurementCounter=0;
@@ -43,5 +41,9 @@ public class PerformanceMeter {
     }
     public void showAverageTime() {
         System.out.println("Average time of "+name+"="+averageTime);
+    }
+    public void reset() {
+        averageTime = 0;
+        measurementCounter = 0;
     }
 }

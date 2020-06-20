@@ -28,7 +28,7 @@ public class SoundControl {
     private boolean processCondition;
 
     //playing sound
-    private byte[] oneBeep, oneSilence;
+    private byte[] unitOfHighSignal, unitOfLowSignal;
     private int unitLengthInMs=60;
     private double volume=0.4;
 
@@ -42,7 +42,8 @@ public class SoundControl {
     private boolean preventiveRecalculate = false;
     private ArrayList<Integer> signalsLength = new ArrayList<>();
     private StringBuilder output = new StringBuilder();
-    private int recognizedLengthUnit = 30;
+    private int recognizedLengthUnitOfHighSignal = 30;
+    private int recognizedLengthUnitOfLowSignal = 30;
 
     SoundControl() {
         intialize();
@@ -73,22 +74,21 @@ public class SoundControl {
         }
 
         controller.disableStopButtonSound(true);
-        oneBeepPreparation();
+        unitsOfSignalPreparation();
     }
-    //TODO: if unit length or volume change, execute again
-    private void oneBeepPreparation() {
+    private void unitsOfSignalPreparation() {
         int maxSampleValue = (int) Math.pow(2,sampleSizeInBits)-1;
         int fullSinsPerSec = 550; //600-800 - number of times in 1sec sin function repeats (frequency)
         double samplesToRepresentFullSin = (double) sampleRate / fullSinsPerSec; //lenght of full sin in samples
         int amountOfSamples = (int)(unitLengthInMs * (double) sampleRate / 1000); //summary amount of all generated samlpes,
 
-        oneBeep = new byte[amountOfSamples];
-        oneSilence = new byte[amountOfSamples];
+        unitOfHighSignal = new byte[amountOfSamples];
+        unitOfLowSignal = new byte[amountOfSamples];
 
         for( int i = 0; i < amountOfSamples; i++ ) {
             double angle = i / samplesToRepresentFullSin * 2.0 * Math.PI;  // full sin goes 0PI to 2PI
-            oneBeep[i] = (byte) (Math.sin(angle) * maxSampleValue * volume);
-            oneSilence[i] = 0;
+            unitOfHighSignal[i] = (byte) (Math.sin(angle) * maxSampleValue * volume);
+            unitOfLowSignal[i] = 0;
         }
 
     }
@@ -107,8 +107,8 @@ public class SoundControl {
         char c;
         for(int i=0; i<signalLength && processCondition; i++) {
             c=signal.charAt(i);
-            if(c==Interpreter.SIGNAL_HIGH) sdl.write(oneBeep, 0, oneBeep.length);
-            else sdl.write(oneSilence, 0, oneSilence.length);
+            if(c==Interpreter.SIGNAL_HIGH) sdl.write(unitOfHighSignal, 0, unitOfHighSignal.length);
+            else sdl.write(unitOfLowSignal, 0, unitOfLowSignal.length);
             controller.setProgressBarVal(i);
             /*
             try {
@@ -173,7 +173,7 @@ public class SoundControl {
 
         //if same boundary and unit length, can calculate only newest data
         int i;
-        if(previousBoundary==boundary && recognizedLengthUnit==possibleUnitLength && !preventiveRecalculate) {
+        if(previousBoundary==boundary && recognizedLengthUnitOfHighSignal ==possibleUnitLength && !preventiveRecalculate) {
             i = dataSize-periodOfAnalyse;
         } else {
             //System.out.println("reset the results");
@@ -181,7 +181,7 @@ public class SoundControl {
             signalsLength.clear();
             output.setLength(0);
             if(boundary>0) previousBoundary = boundary;
-            if(possibleUnitLength>0) recognizedLengthUnit = possibleUnitLength;
+            if(possibleUnitLength>0) recognizedLengthUnitOfHighSignal = possibleUnitLength;
             preventiveRecalculate = false;
         }
 
@@ -193,7 +193,7 @@ public class SoundControl {
             else {
                 signalsLength.add(lengthCounter);
                 output.append((high? Interpreter.SIGNAL_HIGH: Interpreter.SIGNAL_LOW).toString()
-                        .repeat((int) Math.round((double)lengthCounter/recognizedLengthUnit)));
+                        .repeat((int) Math.round((double)lengthCounter/ recognizedLengthUnitOfHighSignal)));
 
                 high = !high;
                 lengthCounter=1;
@@ -217,7 +217,7 @@ public class SoundControl {
 
         //System.out.println("boundary: "+boundary+" avg: "+avg+" max: "+max+" avgHigh: "+avgHigh+" unit length: "+recognizedLengthUnit);
         controller.setSignalCode(output.toString());
-        controller.setSpinnerUnitLength(recognizedLengthUnit*avgForPeriodOfMs);
+        controller.setSpinnerUnitLength(recognizedLengthUnitOfHighSignal *avgForPeriodOfMs);
     }
     private void listener() {
         try {
@@ -279,13 +279,13 @@ public class SoundControl {
         if(vol>=0 && vol<=100) vol /= 100;
         if(vol>=0.0 && vol<=1.0) {
             volume = vol;
-            oneBeepPreparation();
+            unitsOfSignalPreparation();
         }
     }
     public void setUnitLengthInMs(int ms) {
         if(ms>0 && ms<=1200) {
             unitLengthInMs = ms;
-            oneBeepPreparation();
+            unitsOfSignalPreparation();
         }
     }
 }
