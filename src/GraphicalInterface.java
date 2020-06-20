@@ -3,6 +3,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -25,10 +26,9 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     int gap=20, smallHeight=40, bigHeight=150, maxWidth=500;
     int oneThirdWidth = (maxWidth-2*gap)/3;
     int tempX, tempY;
-    //TODO: progress bar, controls for volume and unit length in ms
 
     boolean showSignalCode = true;
-    boolean avoidTooManyTextInputEvents = false;
+    boolean avoidLoopedTextInputEvents = false;
     JLabel lSignal;
     JTextArea taSignal;
     JScrollPane spSignal;
@@ -175,9 +175,9 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         frame.setContentPane(panel);
     }
 
+    //event handling for press the buttons
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
-        //obsluga przyciskow od dzwieku
         String action = actionEvent.getActionCommand();
         System.out.println("button clicked: "+action);
         switch (action) {
@@ -186,34 +186,50 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
             case "stop" -> controller.stopSound();
         }
     }
-
+    //event handling for text input in text areas
     @Override
     public void insertUpdate(DocumentEvent e) {
         textInput(e);
     }
-
     @Override
     public void removeUpdate(DocumentEvent e) {
         textInput(e);
     }
-
     @Override
     public void changedUpdate(DocumentEvent e) {
         textInput(e);
     }
-
     private void textInput(DocumentEvent e) {
-        if(!avoidTooManyTextInputEvents) {
-            if(taText.hasFocus()) {
-                    controller.setText(taText.getText());
-            } else if(taMorse.hasFocus()) {
-                    controller.setMorseCode(taMorse.getText());
+        if(!avoidLoopedTextInputEvents) {
+            Document document = e.getDocument();
+            if (taText.getDocument().equals(document)) {
+                controller.setText(taText.getText());
+            } else if (taMorse.getDocument().equals(document)) {
+                controller.setMorseCode(taMorse.getText());
+            } else if (taSignal.getDocument().equals(document)) {
+                controller.setSignalCode(taSignal.getText());
             }
+        }
+    }
+    //event handling for spinners of volume and unit length
+    @Override
+    public void stateChanged(ChangeEvent changeEvent) {
+        Object source = changeEvent.getSource();
+        if (spinVolume.equals(source)) {
+            controller.volumeChange(Integer.parseInt(spinVolume.getValue().toString()));
+        } else if (spinUnitLength.equals(source)) {
+            int val = Integer.parseInt(spinUnitLength.getValue().toString());
+            spinWpm.setValue(1200/val);
+            controller.unitLengthChange(val);
+        } else if (spinWpm.equals(source)) {
+            int val = 1200/Integer.parseInt(spinWpm.getValue().toString());
+            spinUnitLength.setValue(val);
+            controller.unitLengthChange(val);
         }
     }
     public void setResults() {
         SwingUtilities.invokeLater(() -> {
-            avoidTooManyTextInputEvents=true;
+            avoidLoopedTextInputEvents =true;
             JTextArea focused = (taText.hasFocus() ? taText :
                     (taMorse.hasFocus() ? taMorse :
                             (showSignalCode&&taSignal.hasFocus() ? taSignal : null)));
@@ -226,7 +242,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
 
             if(focused != null && focused.getText().length()>cursorPosition) focused.setCaretPosition(cursorPosition);
 
-            avoidTooManyTextInputEvents=false;
+            avoidLoopedTextInputEvents =false;
         });
     }
     public void showMessage(String s) {
@@ -266,41 +282,18 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         if(showSignalCode) taSignal.setEditable(!disabled);
     }
     public void setProgressBarVal(int value) {
-        SwingUtilities.invokeLater(() -> {
-            progressBar.setValue(value);
-        });
+        SwingUtilities.invokeLater(() -> progressBar.setValue(value));
     }
     public void setProgressBarMax(int maximum) {
-        SwingUtilities.invokeLater(() -> {
-            progressBar.setMaximum(maximum);
-        });
+        SwingUtilities.invokeLater(() -> progressBar.setMaximum(maximum));
     }
     public void setProgressBarStringPainted(boolean stringPainted) {
         progressBar.setStringPainted(stringPainted);
     }
     public void setSpinnerVolume(int val) {
-        SwingUtilities.invokeLater(() -> {
-            spinVolume.setValue(val);
-        });
+        SwingUtilities.invokeLater(() -> spinVolume.setValue(val));
     }
     public void setSpinnerUnitLength(int val) {
-        SwingUtilities.invokeLater(() -> {
-            spinUnitLength.setValue(val);
-        });
-    }
-    @Override
-    public void stateChanged(ChangeEvent changeEvent) {
-        Object source = changeEvent.getSource();
-        if (spinVolume.equals(source)) {
-            controller.volumeChange(Integer.parseInt(spinVolume.getValue().toString()));
-        } else if (spinUnitLength.equals(source)) {
-            int val = Integer.parseInt(spinUnitLength.getValue().toString());
-            spinWpm.setValue(1200/val);
-            controller.unitLengthChange(val);
-        } else if (spinWpm.equals(source)) {
-            int val = 1200/Integer.parseInt(spinWpm.getValue().toString());
-            spinUnitLength.setValue(val);
-            controller.unitLengthChange(val);
-        }
+        SwingUtilities.invokeLater(() -> spinUnitLength.setValue(val));
     }
 }
