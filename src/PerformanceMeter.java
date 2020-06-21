@@ -37,12 +37,13 @@ public class PerformanceMeter {
         calcAverageTime();
     }
     private void calcAverageTime() {
-        averageTime = (averageTime*measurementCounter + measuredTime/(double)dataSize) / ++measurementCounter;
+        averageTime = (averageTime*(measurementCounter-1) + measuredTime/(double)dataSize) / measurementCounter;
     }
     public void showAverageTime() {
         System.out.println("Average time of "+name+"="+averageTime);
     }
     public void reset() {
+        System.out.println(name+" has been reset ");
         averageTime = 0;
         measurementCounter = 0;
     }
