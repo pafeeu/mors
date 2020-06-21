@@ -54,8 +54,6 @@ public class SoundControl {
     int possibleLengthUnitOfLowSignal=0, appearancesLowSignal=0;
     double approximation=0.1; //of unit length
 
-    PerformanceMeter meterTheAnalyse = new PerformanceMeter("analyzer",true);
-
     SoundControl() {
         intialize();
     }
@@ -149,8 +147,6 @@ public class SoundControl {
                 notFound = false;
             }
         }
-        //System.out.println("HS: "+lengthsSignalHigh+"\nHSA: "+lengthsSignalHighAppearances);
-        System.out.println("LS: "+lengthsSignalLow+"\n LSA: "+lengthsSignalLowAppearances);
         if(notFound) {
             list.add(length);
             appearances.add(1);
@@ -186,7 +182,6 @@ public class SoundControl {
             output.setLength(0);
             preventiveRecalculate = false;
         }
-        meterTheAnalyse.start(dataSize-i);
         //main loop
         int elem;
         int lengthCounter = 1;
@@ -206,18 +201,16 @@ public class SoundControl {
             else {
                 if(isHigh) {
                     putIntoLengthsList(true, lengthCounter);
-                    //lengthsSignalHigh.add(lengthCounter);
-                    output.append(Interpreter.SIGNAL_HIGH.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
+                    output.append(Interpreter.SIGNAL_HIGH.toString().repeat(
+                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
+                } else if(isApproximateNear(lengthCounter, recognizedLengthUnitOfHighSignal)) {
+                    putIntoLengthsList(true, lengthCounter);
+                    output.append(Interpreter.SIGNAL_LOW.toString().repeat(
+                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
                 } else {
-                    if(isApproximateNear(lengthCounter, recognizedLengthUnitOfHighSignal)) {
-                        putIntoLengthsList(true, lengthCounter);
-                        //lengthsSignalHigh.add(lengthCounter);
-                        output.append(Interpreter.SIGNAL_LOW.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
-                    } else {
-                        putIntoLengthsList(false, lengthCounter);
-                        //lengthsSignalLow.add(lengthCounter);
-                        output.append(Interpreter.SIGNAL_LOW.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfLowSignal)));
-                    }
+                    putIntoLengthsList(false, lengthCounter);
+                    output.append(Interpreter.SIGNAL_LOW.toString().repeat(
+                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfLowSignal)));
                 }
                 isHigh = !isHigh;
                 lengthCounter=1;
@@ -245,161 +238,17 @@ public class SoundControl {
                 possibleLengthUnitOfLowSignal = lengthsSignalLow.get(j)/3;
             }
         }
-/*
-        int tempAppearancesHighSignal, tempAppearancesLowSignal;
-        for (int el:lengthsSignalHigh) {
-            if (el<3) continue; // filter too small lengths which can cause wrong recognizing
-            tempAppearancesHighSignal = 0;
-            for (int el2 : lengthsSignalHigh) {
-                if(lengthIsNearAnyMultiplicity(true, el2, el)) {
-                    tempAppearancesHighSignal++;
-                }
-            }
-            if (tempAppearancesHighSignal>appearancesHighSignal) {
-                appearancesHighSignal = tempAppearancesHighSignal;
-                possibleLengthUnitOfHighSignal = el;
-            }
-        }
-        for (int el:lengthsSignalLow) {
-            if (el<3) continue; // filter too small lengths which can cause wrong recognizing
-            tempAppearancesLowSignal = 0;
-            el/=3;
-            for (int el2 : lengthsSignalLow) {
-                if(lengthIsNearAnyMultiplicity(false, el2, el)) {
-                    tempAppearancesLowSignal++;
-                }
-            }
-            if (tempAppearancesLowSignal>appearancesLowSignal) {
-                appearancesLowSignal = tempAppearancesLowSignal;
-                possibleLengthUnitOfLowSignal = el;
-            }
-        }
-*/
         //if signal is bad, raise signal gain
         if(possibleBoundary<20 && avgHigh>1) {
             signalGain++;
-            //System.out.println("signal gained to: "+signalGain);
+            System.out.println("signal gained to: "+signalGain);
         }
-        meterTheAnalyse.stop();
-        meterTheAnalyse.showAverageTime();
-        System.out.println("HS: "+recognizedLengthUnitOfHighSignal+" LS: "+recognizedLengthUnitOfLowSignal);
 
         //setting results
         //System.out.println("boundary: "+recognizedBoundary+" max: "+max+" avgHigh: "+avgHigh+" HS="+recognizedLengthUnitOfHighSignal+" LS="+recognizedLengthUnitOfLowSignal);
         controller.setSignalCode(output.toString());
         controller.setSpinnerUnitLength(recognizedLengthUnitOfHighSignal *avgForPeriodOfMs);
     }
-    /*private void analyser(ArrayList<Integer> avgData) {
-        int dataSize=avgData.size();
-        //calculate boundary
-        int max=0, avg=0, avgHigh=0, iHigh=1;
-        for (int el: avgData) {
-            el *= signalGain;
-            if(max<el) max = el;
-            avg += el;
-            if(el>previousBoundary) {
-                avgHigh += el;
-                iHigh++;
-            }
-        }
-        avgHigh /= iHigh;
-        avg /= dataSize;
-        controller.setProgressBarMax(max);
-        //over engineered
-        //int boundary = (int) Math.round(avg>2 ? (max<avg*5 ? avg*2.0+max*0.5/2.5 : previousBoundary>avg*2.0?previousBoundary:avg*2.0) : previousBoundary );
-        //depends on avg + possibly max
-        //int boundary = (int) Math.round(max<avg*5 ? avg+max*0.5/2.0 : avg*1.1);
-        //avg from high signals
-        int boundary = (int) Math.round(avgHigh>2 ? avgHigh*0.45 : max);
-
-        //recognize units length
-        int possibleLengthUnitOfHighSignal=0, appearancesHighSignal=0;
-        int possibleLengthUnitOfLowSignal=0, appearancesLowSignal=0;
-        int tempAppearencesHighSignal, tempAppearencesLowSignal;
-        double approximation=0.1; //lengths of unit
-        for (int el:signalsLength) {
-            if (el<3) continue; // filter too small lengths which can cause wrong recognizing
-            tempAppearencesHighSignal = 0;
-            tempAppearencesLowSignal = 0; //0 not 1, because it count itself in loop:
-            for (int el2 : signalsLength) {
-                //TODO: when whole analyser will be merge into one loop, first check is it low or high signal, then recognize length
-                boolean nearOneLengthUnit = Math.abs(el2 - el) < el * approximation;
-                boolean nearThreeLengthsUnit = Math.abs(el2 - el*3) < el * approximation;
-                boolean nearSevenLengthUnit = Math.abs(el2 - el*7) < el * approximation;
-                //high signal
-                if (nearOneLengthUnit || nearThreeLengthsUnit)
-                    ++tempAppearencesHighSignal;
-                //low signal
-                if (nearOneLengthUnit || nearThreeLengthsUnit || nearSevenLengthUnit)
-                    ++tempAppearencesLowSignal;
-            }
-            if (tempAppearencesHighSignal>appearancesHighSignal) {
-                appearancesHighSignal = tempAppearencesHighSignal;
-                possibleLengthUnitOfHighSignal = el;
-            }
-            if (tempAppearencesLowSignal>appearancesLowSignal) {
-                appearancesLowSignal = tempAppearencesLowSignal;
-                possibleLengthUnitOfLowSignal = el;
-            }
-        }
-        //if same boundary and unit length, can calculate only newest data
-        int i;
-        if(previousBoundary==boundary &&
-                recognizedLengthUnitOfHighSignal==possibleLengthUnitOfHighSignal &&
-                recognizedLengthUnitOfLowSignal==possibleLengthUnitOfLowSignal &&
-                !preventiveRecalculate) {
-            i = dataSize-periodOfAnalyse;
-        } else {
-            //System.out.println("reset the results");
-            i = 0;
-            signalsLength.clear();
-            output.setLength(0);
-            if(boundary>0) previousBoundary = boundary;
-            if(possibleLengthUnitOfHighSignal>0) recognizedLengthUnitOfHighSignal = possibleLengthUnitOfHighSignal;
-            if(possibleLengthUnitOfLowSignal>0) recognizedLengthUnitOfLowSignal = possibleLengthUnitOfLowSignal;
-            preventiveRecalculate = false;
-
-            System.out.print("\nRecognizedLengthUnitOf: HS="+recognizedLengthUnitOfHighSignal);
-            System.out.print(" LS="+recognizedLengthUnitOfLowSignal+"\n");
-        }
-
-        //analyse is it low or high + prepare output
-        int lengthCounter = 1;
-        boolean high=false;
-        while(i<dataSize) {
-            if(high==avgData.get(i)*signalGain>boundary) lengthCounter++;
-            else {
-                signalsLength.add(lengthCounter);
-                if(high) {
-                    output.append(Interpreter.SIGNAL_HIGH.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
-                } else {
-                    output.append(Interpreter.SIGNAL_LOW.toString().repeat((int) Math.round((double) lengthCounter / recognizedLengthUnitOfLowSignal)));
-                }
-                high = !high;
-                lengthCounter=1;
-            }
-            i++;
-        }
-
-
-/*        TODO:
-*            -w rozpoznaniu low or high + prepare output mozna wcisnac rozpoznanie nowej granicy
-*               (i tak sie iteruje po avgData)
-*            -w trakcie tworzenia signalsLength można by analizować długość (zliczanie wystąpień maybe?)
-*           -ofc przetestować wtedy wydajność
-*/
-/*
-        //if signal is bad, raise signal gain
-        if(boundary<20 && avg>1) {
-            signalGain++;
-            //System.out.println("signal gained to: "+signalGain);
-        }
-
-        //System.out.println("boundary: "+boundary+" avg: "+avg+" max: "+max+" avgHigh: "+avgHigh+" unit length: "+recognizedLengthUnit);
-        controller.setSignalCode(output.toString());
-        controller.setSpinnerUnitLength(recognizedLengthUnitOfHighSignal *avgForPeriodOfMs);
-    }
-    */
     private void listener() {
         try {
             tdl.open(af);
@@ -434,7 +283,6 @@ public class SoundControl {
         //last analyse
         preventiveRecalculate = true;
         analyser(avgData);
-        meterTheAnalyse.reset();
     }
     public void listen() {
         lengthsSignalLow.clear();
