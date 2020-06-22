@@ -13,6 +13,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     public void setController(ControlUnit controller) {
         this.controller = controller;
     }
+    final String MS="MS", WPM="WPM";
 
     JFrame frame;
     JPanel panel;
@@ -21,11 +22,11 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     JLabel labSpeedUnit;
     ButtonGroup bgSpeedUnits;
     JRadioButtonMenuItem miSpinnersMS, miSpinnersWPM;
-    JLabel labText, labMorse, labVolume, labUnitLength, labWpm;
+    JLabel labText, labMorse, labVolume, labBasicUnitLength, labGapUnitLength;
     JTextArea taText, taMorse;
     JScrollPane spText, spMorse;
     JButton butStartPlay, butStartListen, butStop;
-    JSpinner spinVolume, spinUnitLength, spinWpm;
+    JSpinner spinVolume, spinBasicUnitLength, spinGapUnitLength;
     JProgressBar progressBar;
     Font font;
     int gap=20, smallHeight=40, bigHeight=150, maxWidth=500;
@@ -33,7 +34,8 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     int tempX, tempY;
 
     boolean showSignalCode = true;
-    boolean avoidLoopedTextInputEvents = false;
+    boolean avoidLoopedEvents = false;
+    String unitOfLength;
     JLabel lSignal;
     JTextArea taSignal;
     JScrollPane spSignal;
@@ -66,15 +68,15 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         labText = new JLabel("Tekst (znaki alfanumeryczne):");
         labMorse = new JLabel("Kod morsa (znaki "+AlphabetPair.LONG_SIGN+" i "+AlphabetPair.SHORT_SIGN+"):");
         labVolume = new JLabel("Głośność: ");
-        labUnitLength = new JLabel("Długość jednostki (ms)");
-        labWpm = new JLabel("Słów na minutę: ");
+        labBasicUnitLength = new JLabel("");
+        labGapUnitLength = new JLabel("");
         taText = new JTextArea();
         taMorse = new JTextArea();
         spText = new JScrollPane(taText);
         spMorse = new JScrollPane(taMorse);
         spinVolume = new JSpinner(new SpinnerNumberModel(50, 0, 100,1));
-        spinUnitLength = new JSpinner(new SpinnerNumberModel(60, 1, 1200,1));
-        spinWpm = new JSpinner(new SpinnerNumberModel(20, 1, 1200,1));
+        spinBasicUnitLength = new JSpinner(new SpinnerNumberModel(30, 1, 1200,1));
+        spinGapUnitLength = new JSpinner(new SpinnerNumberModel(30, 1, 1200,1));
         progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
         butStartPlay = new JButton("Odtwórz");
         butStartListen = new JButton("Słuchaj");
@@ -83,13 +85,15 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
 
         //building menu
         menuBar.add(mSettings);
-        //miSpeedUnit.setD(false);
         mSettings.add(labSpeedUnit);
-        miSpinnersMS.setSelected(true);
         bgSpeedUnits.add(miSpinnersMS);
         bgSpeedUnits.add(miSpinnersWPM);
         mSettings.add(miSpinnersMS);
         mSettings.add(miSpinnersWPM);
+        miSpinnersMS.addActionListener(this);
+        miSpinnersMS.setActionCommand("unit=ms");
+        miSpinnersWPM.addActionListener(this);
+        miSpinnersWPM.setActionCommand("unit=wpm");
 
         //options for scroll pane's and text area's
         spText.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -109,8 +113,8 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         taText.getDocument().addDocumentListener(this);
         taMorse.getDocument().addDocumentListener(this);
         spinVolume.addChangeListener(this);
-        spinUnitLength.addChangeListener(this);
-        spinWpm.addChangeListener(this);
+        spinBasicUnitLength.addChangeListener(this);
+        spinGapUnitLength.addChangeListener(this);
         butStartPlay.addActionListener(this);
         butStartPlay.setActionCommand("play");
         butStartListen.addActionListener(this);
@@ -153,21 +157,20 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
 
         labVolume.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX += gap + oneThirdWidth;
-        labUnitLength.setBounds(tempX, tempY, oneThirdWidth+gap, smallHeight);
+        labBasicUnitLength.setBounds(tempX, tempY, oneThirdWidth+gap, smallHeight);
         tempX += gap + oneThirdWidth;
-        labWpm.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
+        labGapUnitLength.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX = gap;
         tempY += smallHeight;
         spinVolume.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX += gap + oneThirdWidth;
-        spinUnitLength.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
+        spinBasicUnitLength.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX += gap + oneThirdWidth;
-        spinWpm.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
+        spinGapUnitLength.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX = gap;
         tempY += gap + smallHeight;
         progressBar.setBounds(tempX, tempY, maxWidth, smallHeight);
         tempY += gap + smallHeight;
-
         butStartPlay.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
         tempX += gap + oneThirdWidth;
         butStartListen.setBounds(tempX, tempY, oneThirdWidth, smallHeight);
@@ -181,11 +184,11 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         panel.add(labMorse);
         panel.add(spMorse);
         panel.add(labVolume);
-        panel.add(labUnitLength);
-        panel.add(labWpm);
+        panel.add(labBasicUnitLength);
+        panel.add(labGapUnitLength);
         panel.add(spinVolume);
-        panel.add(spinUnitLength);
-        panel.add(spinWpm);
+        panel.add(spinBasicUnitLength);
+        panel.add(spinGapUnitLength);
         panel.add(progressBar);
         panel.add(butStartPlay);
         panel.add(butStartListen);
@@ -197,7 +200,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         frame.setContentPane(panel);
     }
 
-    //event handling for press the buttons
+    //event handling for press the buttons and radio buttons
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
         String action = actionEvent.getActionCommand();
@@ -206,6 +209,8 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
             case "play" -> controller.playSound();
             case "listen" -> controller.listenSound();
             case "stop" -> controller.stopSound();
+            case "unit=ms" -> unitOfLengthWasChanged(MS);
+            case "unit=wpm" -> unitOfLengthWasChanged(WPM);
         }
     }
     //event handling for text input in text areas
@@ -222,7 +227,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         textInput(e);
     }
     private void textInput(DocumentEvent e) {
-        if(!avoidLoopedTextInputEvents) {
+        if(!avoidLoopedEvents) {
             Document document = e.getDocument();
             if (taText.getDocument().equals(document)) {
                 controller.setText(taText.getText());
@@ -239,19 +244,13 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
         Object source = changeEvent.getSource();
         if (spinVolume.equals(source)) {
             controller.volumeChange(Integer.parseInt(spinVolume.getValue().toString()));
-        } else if (spinUnitLength.equals(source)) {
-            int val = Integer.parseInt(spinUnitLength.getValue().toString());
-            spinWpm.setValue(1200/val);
-            controller.unitLengthChange(val);
-        } else if (spinWpm.equals(source)) {
-            int val = 1200/Integer.parseInt(spinWpm.getValue().toString());
-            spinUnitLength.setValue(val);
-            controller.unitLengthChange(val);
+        } else if(spinBasicUnitLength.equals(source) || spinGapUnitLength.equals(source)) {
+            if(!avoidLoopedEvents) spinUnitLengthValuesChanged();
         }
     }
     public void setResults() {
         SwingUtilities.invokeLater(() -> {
-            avoidLoopedTextInputEvents =true;
+            avoidLoopedEvents = true;
             JTextArea focused = (taText.hasFocus() ? taText :
                     (taMorse.hasFocus() ? taMorse :
                             (showSignalCode&&taSignal.hasFocus() ? taSignal : null)));
@@ -264,7 +263,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
 
             if(focused != null && focused.getText().length()>cursorPosition) focused.setCaretPosition(cursorPosition);
 
-            avoidLoopedTextInputEvents =false;
+            avoidLoopedEvents = false;
         });
     }
     public void showMessage(String s) {
@@ -287,16 +286,16 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     public void disableSpinnerVolume(boolean disabled) {
         spinVolume.setEnabled(!disabled);
     }
-    public void disableSpinnerUnitLengthAndWpm(boolean disabled) {
-        spinUnitLength.setEnabled(!disabled);
-        spinWpm.setEnabled(!disabled);
+    public void disableSpinnersUnitLength(boolean disabled) {
+        spinBasicUnitLength.setEnabled(!disabled);
+        spinGapUnitLength.setEnabled(!disabled);
     }
     public void disableSoundModule(boolean disabled) {
         disablePlayButtonSound(disabled);
         disableListenButtonSound(disabled);
         disableStopButtonSound(disabled);
         disableSpinnerVolume(disabled);
-        disableSpinnerUnitLengthAndWpm(disabled);
+        disableSpinnersUnitLength(disabled);
     }
     public void disableTextAreas(boolean disabled) {
         taText.setEditable(!disabled);
@@ -315,7 +314,43 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     public void setSpinnerVolume(int val) {
         SwingUtilities.invokeLater(() -> spinVolume.setValue(val));
     }
-    public void setSpinnerUnitLength(int val) {
-        SwingUtilities.invokeLater(() -> spinUnitLength.setValue(val));
+    public void setSpinnerUnitLength(int valBasicLength, int valGapLength) {
+        SwingUtilities.invokeLater(() -> {
+            if(unitOfLength.equals(WPM)) {
+                //convert ms to wpm
+                spinBasicUnitLength.setValue(1200/valBasicLength);
+                spinGapUnitLength.setValue(1200/valGapLength);
+            } else {
+                spinBasicUnitLength.setValue(valBasicLength);
+                spinGapUnitLength.setValue(valGapLength);
+            }
+        });
+    }
+    private void unitOfLengthWasChanged(String unit) {
+        unitOfLength=unit;
+        if(unitOfLength.equals(MS)) {
+            labBasicUnitLength.setText("Długość: sygnału (ms)");
+            labGapUnitLength.setText("przerw (Farnsworth)");
+        } else if (unitOfLength.equals(WPM)) {
+            labBasicUnitLength.setText("Długość: sygnału (wpm)");
+            labGapUnitLength.setText("przerw (Farnsworth)");
+        }
+        //convert values to other unit
+        int basic = Integer.parseInt(spinBasicUnitLength.getValue().toString());
+        int gap = Integer.parseInt(spinGapUnitLength.getValue().toString());
+        avoidLoopedEvents = true;
+        spinBasicUnitLength.setValue(1200/basic);
+        spinGapUnitLength.setValue(1200/gap);
+        avoidLoopedEvents = false;
+    }
+    private void spinUnitLengthValuesChanged() {
+        int basic = Integer.parseInt(spinBasicUnitLength.getValue().toString());
+        int gap = Integer.parseInt(spinGapUnitLength.getValue().toString());
+        if(unitOfLength.equals(WPM)) {
+            //conversion wpm to ms
+            basic = 1200/basic;
+            gap = 1200/gap;
+        }
+        controller.unitLengthChange(basic, gap);
     }
 }

@@ -86,6 +86,7 @@ public class SoundControl {
         unitsOfSignalPreparation();
     }
     private void unitsOfSignalPreparation() {
+        System.out.println("[SC.preparation] basic="+basicUnitLength+" gap="+gapUnitLength);
         int maxSampleValue = (int) Math.pow(2,sampleSizeInBits)-1;
         int fullSinsPerSec = 550; //600-800 - number of times in 1sec sin function repeats (frequency)
         double samplesToRepresentFullSin = (double) sampleRate / fullSinsPerSec; //lenght of full sin in samples
@@ -257,13 +258,13 @@ public class SoundControl {
         //if signal is bad, raise signal gain
         if(possibleBoundary<20 && avgHigh>1) {
             signalGain++;
-            System.out.println("signal gained to: "+signalGain);
+            //System.out.println("signal gained to: "+signalGain);
         }
 
         //setting results
         //System.out.println("boundary: "+recognizedBoundary+" max: "+max+" avgHigh: "+avgHigh+" HS="+recognizedLengthUnitOfHighSignal+" LS="+recognizedLengthUnitOfLowSignal);
         controller.setSignalCode(output.toString());
-        controller.setSpinnerUnitLength(basicUnitLength *avgForPeriodOfMs);
+        controller.setSpinnerUnitLength(basicUnitLength*avgForPeriodOfMs, gapUnitLength*avgForPeriodOfMs);
     }
     private void listener() {
         try {
@@ -328,9 +329,10 @@ public class SoundControl {
             unitsOfSignalPreparation();
         }
     }
-    public void setBasicUnitLength(int ms) {
-        if(ms>0 && ms<=1200) {
-            basicUnitLength = ms;
+    public void setUnitLength(int basicUnitLengthInMS, int gapUnitLengthInMS) {
+        if(basicUnitLengthInMS>0 && basicUnitLengthInMS<=1200 && gapUnitLengthInMS>0 && gapUnitLengthInMS<=1200) {
+            basicUnitLength = basicUnitLengthInMS;
+            gapUnitLength = gapUnitLengthInMS;
             unitsOfSignalPreparation();
         }
     }

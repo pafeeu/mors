@@ -13,7 +13,8 @@ public class ControlUnit {
 
         //get default values from gui
         gui.setSpinnerVolume(30);
-        setSpinnerUnitLength(60);
+        gui.miSpinnersMS.doClick();
+        setSpinnerUnitLength(30,30);
         setProgressBarVal(0);
         setProgressBarMax(100);
     }
@@ -58,7 +59,7 @@ public class ControlUnit {
         gui.disableSpinnerVolume(disabled);
     }
     public void disableSpinnerUnitLengthAndWpm(boolean disabled) {
-        gui.disableSpinnerUnitLengthAndWpm(disabled);
+        gui.disableSpinnersUnitLength(disabled);
     }
     public void setProgressBarVal(int val) {
         gui.setProgressBarVal(val);
@@ -102,11 +103,11 @@ public class ControlUnit {
     public void volumeChange(int vol) {
         soundControl.setVolume(vol);
     }
-    public void unitLengthChange(int len) {
-        soundControl.setBasicUnitLength(len);
+    public void unitLengthChange(int basicLength, int gapLength) {
+        soundControl.setUnitLength(basicLength, gapLength);
     }
-    public void setSpinnerUnitLength(int len) {
-        gui.setSpinnerUnitLength(len);
+    public void setSpinnerUnitLength(int basicLength, int gapLength) {
+        gui.setSpinnerUnitLength(basicLength, gapLength);
     }
 
     public void pushMessage(String s) {
