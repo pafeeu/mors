@@ -26,10 +26,12 @@ public class SoundControl {
     private TargetDataLine tdl;
     private Thread playThread, listenThread;
     private boolean processCondition;
+    //basicUnitLength is speed of single character's signal
+    //gapUnitLength is adaptation of 'Farnsworth  timing' which cause gap between alphabetic chars and between words is slower than basic speed (so it's longer)
+    private int basicUnitLength=60, gapUnitLength=60;
 
     //playing sound
-    private byte[] unitOfHighSignal, unitOfLowSignal;
-    private int unitLengthInMs=60;
+    private byte[] highSignalOnBasicSpeed, lowSignalOnBasicSpeed, lowSignalOnGapSpeed;
     private double volume=0.4;
 
     //listening and anaylse sound
@@ -39,20 +41,18 @@ public class SoundControl {
     private int periodOfAnalyse = 200;
     private int periodOfRecalculate = 1000;
     private boolean preventiveRecalculate = false;
-    private ArrayList<Integer> lengthsSignalLow = new ArrayList<>();
-    private ArrayList<Integer> lengthsSignalLowAppearances = new ArrayList<>();
-    private ArrayList<Integer> lengthsSignalHigh = new ArrayList<>();
-    private ArrayList<Integer> lengthsSignalHighAppearances = new ArrayList<>();
+    private ArrayList<Integer> lengthsGapUnit = new ArrayList<>();
+    private ArrayList<Integer> lengthsGapUnitAppearances = new ArrayList<>();
+    private ArrayList<Integer> lengthsBasicUnit = new ArrayList<>();
+    private ArrayList<Integer> lengthsBasicUnitAppearances = new ArrayList<>();
     private StringBuilder output = new StringBuilder();
-    private int signalGain = 1, recognizedBoundary =1;
-    private int recognizedLengthUnitOfHighSignal = 30;
-    private int recognizedLengthUnitOfLowSignal = 60;
+    private int signalGain = 1, recognizedBoundary = 1;
     //temporary stored values for analyser
-    int max=0, avgHigh=0, iteratorAvgHigh=1;
-    int possibleBoundary=1;
-    int possibleLengthUnitOfHighSignal=0, appearancesHighSignal=0;
-    int possibleLengthUnitOfLowSignal=0, appearancesLowSignal=0;
-    double approximation=0.1; //of unit length
+    private int max = 0, avgHigh = 0, iteratorAvgHigh = 1;
+    private int possibleBoundary = 1;
+    private int possibleBasicUnitLength = 0, appearancesBasicUnitLength = 0;
+    private int possibleGapUnitLength = 0, appearancesGapUnitLength = 0;
+    private double approximation = 0.1; //of unit length
 
     SoundControl() {
         intialize();
@@ -89,15 +89,27 @@ public class SoundControl {
         int maxSampleValue = (int) Math.pow(2,sampleSizeInBits)-1;
         int fullSinsPerSec = 550; //600-800 - number of times in 1sec sin function repeats (frequency)
         double samplesToRepresentFullSin = (double) sampleRate / fullSinsPerSec; //lenght of full sin in samples
-        int amountOfSamples = (int)(unitLengthInMs * (double) sampleRate / 1000); //summary amount of all generated samlpes,
+        int amountOfSamplesToBasicSpeed = (int)(basicUnitLength * (double) sampleRate / 1000); //summary amount of all generated samlpes,
+        int amountOfSamplesToGapSpeed = (int)(gapUnitLength * (double) sampleRate / 1000);
 
-        unitOfHighSignal = new byte[amountOfSamples];
-        unitOfLowSignal = new byte[amountOfSamples];
+        highSignalOnBasicSpeed = new byte[amountOfSamplesToBasicSpeed];
+        lowSignalOnBasicSpeed = new byte[amountOfSamplesToBasicSpeed];
+        lowSignalOnGapSpeed = new byte[amountOfSamplesToGapSpeed];
 
-        for( int i = 0; i < amountOfSamples; i++ ) {
-            double angle = i / samplesToRepresentFullSin * 2.0 * Math.PI;  // full sin goes 0PI to 2PI
-            unitOfHighSignal[i] = (byte) (Math.sin(angle) * maxSampleValue * volume);
-            unitOfLowSignal[i] = 0;
+        double angle;
+        int i=0;
+        while(i<amountOfSamplesToBasicSpeed) {
+            angle = i / samplesToRepresentFullSin * 2.0 * Math.PI;  // full sin goes 0PI to 2PI
+            highSignalOnBasicSpeed[i] = (byte) (Math.sin(angle) * maxSampleValue * volume);
+            lowSignalOnBasicSpeed[i] = 0;
+            if(i<amountOfSamplesToGapSpeed) {
+                lowSignalOnGapSpeed[i] = 0;
+            }
+            i++;
+        }
+        while(i<amountOfSamplesToGapSpeed) {
+            lowSignalOnGapSpeed[i] = 0;
+            i++;
         }
 
     }
@@ -116,8 +128,12 @@ public class SoundControl {
         char c;
         for(int i=0; i<signalLength && processCondition; i++) {
             c=signal.charAt(i);
-            if(c==Interpreter.SIGNAL_HIGH) sdl.write(unitOfHighSignal, 0, unitOfHighSignal.length);
-            else sdl.write(unitOfLowSignal, 0, unitOfLowSignal.length);
+            if(c==Interpreter.SIGNAL_HIGH) sdl.write(highSignalOnBasicSpeed, 0, highSignalOnBasicSpeed.length);
+            else {
+                if(i>0 && i<signalLength-1 && signal.charAt(i-1)==Interpreter.SIGNAL_HIGH && signal.charAt(i+1)==Interpreter.SIGNAL_HIGH)
+                    sdl.write(lowSignalOnBasicSpeed, 0, lowSignalOnBasicSpeed.length);
+                else sdl.write(lowSignalOnGapSpeed, 0, lowSignalOnGapSpeed.length);
+            }
             controller.setProgressBarVal(i);
         }
 
@@ -138,8 +154,8 @@ public class SoundControl {
     }
     private void putIntoLengthsList(boolean isHighSignal, int length) {
         if(length<3) return;
-        ArrayList<Integer> list = (isHighSignal ? lengthsSignalHigh : lengthsSignalLow);
-        ArrayList<Integer> appearances = (isHighSignal ? lengthsSignalHighAppearances : lengthsSignalLowAppearances);
+        ArrayList<Integer> list = (isHighSignal ? lengthsBasicUnit : lengthsGapUnit);
+        ArrayList<Integer> appearances = (isHighSignal ? lengthsBasicUnitAppearances : lengthsGapUnitAppearances);
         boolean notFound = true;
         for(int i=0; i<list.size(); i++) {
             if(lengthIsNearAnyMultiplicity(isHighSignal, length, list.get(i))) {
@@ -154,31 +170,31 @@ public class SoundControl {
     }
     private void analyser(ArrayList<Integer> avgData) {
         int dataSize=avgData.size();
-        //if same boundary and unit length, can calculate only newest data
+        //if same boundary and unit lengths, can calculate only newest data
         int i;
-        if(recognizedBoundary==possibleBoundary &&
-                recognizedLengthUnitOfHighSignal==possibleLengthUnitOfHighSignal &&
-                recognizedLengthUnitOfLowSignal==possibleLengthUnitOfLowSignal &&
+        if(recognizedBoundary == possibleBoundary &&
+                basicUnitLength == possibleBasicUnitLength &&
+                gapUnitLength == possibleGapUnitLength &&
                 !preventiveRecalculate) {
             i = dataSize-periodOfAnalyse;
         } else {
             //System.out.println("reset the results");
             if(possibleBoundary>0) recognizedBoundary = possibleBoundary;
-            if(possibleLengthUnitOfHighSignal>0) recognizedLengthUnitOfHighSignal = possibleLengthUnitOfHighSignal;
-            if(possibleLengthUnitOfLowSignal>0) recognizedLengthUnitOfLowSignal = possibleLengthUnitOfLowSignal;
+            if(possibleBasicUnitLength >0) basicUnitLength = possibleBasicUnitLength;
+            if(possibleGapUnitLength >0) gapUnitLength = possibleGapUnitLength;
 
-            i = 0;
+            i=0;
             max=0;
             avgHigh=0;
             iteratorAvgHigh=1;
-            lengthsSignalHigh.clear();
-            lengthsSignalLow.clear();
-            lengthsSignalHighAppearances.clear();
-            lengthsSignalLowAppearances.clear();
-            possibleLengthUnitOfHighSignal=0;
-            possibleLengthUnitOfLowSignal=0;
-            appearancesLowSignal=0;
-            appearancesHighSignal=0;
+            lengthsBasicUnit.clear();
+            lengthsGapUnit.clear();
+            lengthsBasicUnitAppearances.clear();
+            lengthsGapUnitAppearances.clear();
+            possibleBasicUnitLength =0;
+            possibleGapUnitLength =0;
+            appearancesGapUnitLength =0;
+            appearancesBasicUnitLength =0;
             output.setLength(0);
             preventiveRecalculate = false;
         }
@@ -202,15 +218,15 @@ public class SoundControl {
                 if(isHigh) {
                     putIntoLengthsList(true, lengthCounter);
                     output.append(Interpreter.SIGNAL_HIGH.toString().repeat(
-                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
-                } else if(isApproximateNear(lengthCounter, recognizedLengthUnitOfHighSignal)) {
+                            (int) Math.round((double) lengthCounter / basicUnitLength)));
+                } else if(isApproximateNear(lengthCounter, basicUnitLength)) {
                     putIntoLengthsList(true, lengthCounter);
                     output.append(Interpreter.SIGNAL_LOW.toString().repeat(
-                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfHighSignal)));
+                            (int) Math.round((double) lengthCounter / basicUnitLength)));
                 } else {
                     putIntoLengthsList(false, lengthCounter);
                     output.append(Interpreter.SIGNAL_LOW.toString().repeat(
-                            (int) Math.round((double) lengthCounter / recognizedLengthUnitOfLowSignal)));
+                            (int) Math.round((double) lengthCounter / gapUnitLength)));
                 }
                 isHigh = !isHigh;
                 lengthCounter=1;
@@ -225,17 +241,17 @@ public class SoundControl {
         controller.setProgressBarMax(max);
 
         //select new unit lengths
-        for (int j = 0; j < lengthsSignalHighAppearances.size(); j++) {
-            if(lengthsSignalHighAppearances.get(j) > appearancesHighSignal) {
-                appearancesHighSignal = lengthsSignalHighAppearances.get(j);
-                possibleLengthUnitOfHighSignal = lengthsSignalHigh.get(j);
+        for (int j = 0; j < lengthsBasicUnitAppearances.size(); j++) {
+            if(lengthsBasicUnitAppearances.get(j) > appearancesBasicUnitLength) {
+                appearancesBasicUnitLength = lengthsBasicUnitAppearances.get(j);
+                possibleBasicUnitLength = lengthsBasicUnit.get(j);
             }
         }
-        for (int j = 0; j < lengthsSignalLowAppearances.size(); j++) {
-            if(lengthsSignalLowAppearances.get(j) > appearancesLowSignal) {
-                appearancesLowSignal = lengthsSignalLowAppearances.get(j);
+        for (int j = 0; j < lengthsGapUnitAppearances.size(); j++) {
+            if(lengthsGapUnitAppearances.get(j) > appearancesGapUnitLength) {
+                appearancesGapUnitLength = lengthsGapUnitAppearances.get(j);
                 //the result must by divided by 3 cause this arr has only 3 units
-                possibleLengthUnitOfLowSignal = lengthsSignalLow.get(j)/3;
+                possibleGapUnitLength = lengthsGapUnit.get(j)/3;
             }
         }
         //if signal is bad, raise signal gain
@@ -247,7 +263,7 @@ public class SoundControl {
         //setting results
         //System.out.println("boundary: "+recognizedBoundary+" max: "+max+" avgHigh: "+avgHigh+" HS="+recognizedLengthUnitOfHighSignal+" LS="+recognizedLengthUnitOfLowSignal);
         controller.setSignalCode(output.toString());
-        controller.setSpinnerUnitLength(recognizedLengthUnitOfHighSignal *avgForPeriodOfMs);
+        controller.setSpinnerUnitLength(basicUnitLength *avgForPeriodOfMs);
     }
     private void listener() {
         try {
@@ -265,7 +281,7 @@ public class SoundControl {
         double sampleAvg;
         do {
             tdl.read(data, 0, data.length);
-            //compressing data into one avg of 2 milliseconds
+            //compressing data into one avg of some milliseconds
             sampleAvg=0;
             for(i=0; i<data.length; i++) {
                 sampleAvg += Math.abs(data[i]);
@@ -285,7 +301,7 @@ public class SoundControl {
         analyser(avgData);
     }
     public void listen() {
-        lengthsSignalLow.clear();
+        lengthsGapUnit.clear();
         output.setLength(0);
         signalGain=1;
         processCondition = true;
@@ -312,9 +328,9 @@ public class SoundControl {
             unitsOfSignalPreparation();
         }
     }
-    public void setUnitLengthInMs(int ms) {
+    public void setBasicUnitLength(int ms) {
         if(ms>0 && ms<=1200) {
-            unitLengthInMs = ms;
+            basicUnitLength = ms;
             unitsOfSignalPreparation();
         }
     }

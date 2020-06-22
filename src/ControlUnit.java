@@ -103,7 +103,7 @@ public class ControlUnit {
         soundControl.setVolume(vol);
     }
     public void unitLengthChange(int len) {
-        soundControl.setUnitLengthInMs(len);
+        soundControl.setBasicUnitLength(len);
     }
     public void setSpinnerUnitLength(int len) {
         gui.setSpinnerUnitLength(len);
