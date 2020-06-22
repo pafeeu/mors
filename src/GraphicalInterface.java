@@ -204,7 +204,7 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
         String action = actionEvent.getActionCommand();
-        System.out.println("button clicked: "+action);
+        //System.out.println("button clicked: "+action);
         switch (action) {
             case "play" -> controller.playSound();
             case "listen" -> controller.listenSound();

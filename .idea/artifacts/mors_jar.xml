@@ -1,6 +1,9 @@
 <component name="ArtifactManager">
   <artifact type="jar" build-on-make="true" name="mors:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/mors_jar</output-path>
+    <properties id="ant-postprocessing">
+      <options enabled="true" />
+    </properties>
     <root id="archive" name="mors.jar">
       <element id="module-output" name="mors" />
     </root>

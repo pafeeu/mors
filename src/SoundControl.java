@@ -86,7 +86,7 @@ public class SoundControl {
         unitsOfSignalPreparation();
     }
     private void unitsOfSignalPreparation() {
-        System.out.println("[SC.preparation] basic="+basicUnitLength+" gap="+gapUnitLength);
+        //System.out.println("[SC.preparation] basic="+basicUnitLength+" gap="+gapUnitLength);
         int maxSampleValue = (int) Math.pow(2,sampleSizeInBits)-1;
         int fullSinsPerSec = 550; //600-800 - number of times in 1sec sin function repeats (frequency)
         double samplesToRepresentFullSin = (double) sampleRate / fullSinsPerSec; //lenght of full sin in samples
