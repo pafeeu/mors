@@ -329,10 +329,10 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     private void unitOfLengthWasChanged(String unit) {
         unitOfLength=unit;
         if(unitOfLength.equals(MS)) {
-            labBasicUnitLength.setText("Długość: sygnału (ms)");
+            labBasicUnitLength.setText("Długość (ms): sygnału");
             labGapUnitLength.setText("przerw (Farnsworth)");
         } else if (unitOfLength.equals(WPM)) {
-            labBasicUnitLength.setText("Długość: sygnału (wpm)");
+            labBasicUnitLength.setText("Długość (wpm): sygnału");
             labGapUnitLength.setText("przerw (Farnsworth)");
         }
         //convert values to other unit
@@ -346,6 +346,12 @@ public class GraphicalInterface implements ActionListener, ChangeListener, Docum
     private void spinUnitLengthValuesChanged() {
         int basic = Integer.parseInt(spinBasicUnitLength.getValue().toString());
         int gap = Integer.parseInt(spinGapUnitLength.getValue().toString());
+        if((unitOfLength.equals(WPM) && gap>basic) || (unitOfLength.equals(MS) && gap<basic)) {
+            avoidLoopedEvents = true;
+            gap = basic;
+            spinGapUnitLength.setValue(gap);
+            avoidLoopedEvents = false;
+        }
         if(unitOfLength.equals(WPM)) {
             //conversion wpm to ms
             basic = 1200/basic;

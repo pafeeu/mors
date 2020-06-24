@@ -13,10 +13,10 @@ public class ControlUnit {
 
         //get default values from gui
         gui.setSpinnerVolume(30);
-        gui.miSpinnersMS.doClick();
-        setSpinnerUnitLength(30,30);
+        gui.miSpinnersWPM.doClick();
         setProgressBarVal(0);
         setProgressBarMax(100);
+        setSpinnerUnitLength(30,30);
     }
 
     public void setText(String text) {
