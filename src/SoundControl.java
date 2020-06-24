@@ -28,7 +28,7 @@ public class SoundControl {
     private boolean processCondition;
     //basicUnitLength is speed of single character's signal
     //gapUnitLength is adaptation of 'Farnsworth  timing' which cause gap between alphabetic chars and between words is slower than basic speed (so it's longer)
-    private int basicUnitLength=60, gapUnitLength=60;
+    private int basicUnitLength=40, gapUnitLength=40;
 
     //playing sound
     private byte[] highSignalOnBasicSpeed, lowSignalOnBasicSpeed, lowSignalOnGapSpeed;
@@ -52,7 +52,7 @@ public class SoundControl {
     private int possibleBoundary = 1;
     private int possibleBasicUnitLength = 0, appearancesBasicUnitLength = 0;
     private int possibleGapUnitLength = 0, appearancesGapUnitLength = 0;
-    private double approximation = 0.1; //of unit length
+    private double approximation = 0.15; //of unit length
 
     SoundControl() {
         intialize();
@@ -83,7 +83,9 @@ public class SoundControl {
         }
 
         controller.disableStopButtonSound(true);
-        unitsOfSignalPreparation();
+        controller.setSpinnerUnitLength(basicUnitLength, gapUnitLength);
+        //if without gui, needed:
+        //unitsOfSignalPreparation();
     }
     private void unitsOfSignalPreparation() {
         //System.out.println("[SC.preparation] basic="+basicUnitLength+" gap="+gapUnitLength);
@@ -103,9 +105,7 @@ public class SoundControl {
             angle = i / samplesToRepresentFullSin * 2.0 * Math.PI;  // full sin goes 0PI to 2PI
             highSignalOnBasicSpeed[i] = (byte) (Math.sin(angle) * maxSampleValue * volume);
             lowSignalOnBasicSpeed[i] = 0;
-            if(i<amountOfSamplesToGapSpeed) {
-                lowSignalOnGapSpeed[i] = 0;
-            }
+            lowSignalOnGapSpeed[i] = 0;
             i++;
         }
         while(i<amountOfSamplesToGapSpeed) {
@@ -237,7 +237,7 @@ public class SoundControl {
 
         //calculate boundary
         avgHigh = sumHigh/iteratorAvgHigh;
-        possibleBoundary = (int) Math.round(avgHigh>2 ? avgHigh*0.66 : max);
+        possibleBoundary = (int) Math.round(avgHigh>2 ? avgHigh*0.85 : max/2);
         //for visualisation
         controller.setProgressBarMax(max);
 
@@ -249,7 +249,8 @@ public class SoundControl {
             }
         }
         for (int j = 0; j < lengthsGapUnitAppearances.size(); j++) {
-            if(lengthsGapUnitAppearances.get(j) > appearancesGapUnitLength) {
+            if(lengthsGapUnitAppearances.get(j) > appearancesGapUnitLength &&
+                    (lengthsGapUnit.get(j)/3>=basicUnitLength*(1-approximation*2))) {
                 appearancesGapUnitLength = lengthsGapUnitAppearances.get(j);
                 //the result must by divided by 3 cause this arr has only 3 units
                 possibleGapUnitLength = lengthsGapUnit.get(j)/3;
@@ -260,9 +261,17 @@ public class SoundControl {
             signalGain++;
             //System.out.println("signal gained to: "+signalGain);
         }
+        /*
+        //log more informations about result of analyse
+        System.out.println("basic: "+lengthsBasicUnit.toString());
+        System.out.println(lengthsBasicUnitAppearances.toString());
+        System.out.println("gap: "+lengthsGapUnit.toString());
+        System.out.println(lengthsGapUnitAppearances.toString());
+        //System.out.println(avgData.toString());
+        System.out.println("boundary: "+recognizedBoundary+" max: "+max+" avgHigh: "+avgHigh+" basicLen="+basicUnitLength+" gapLen="+gapUnitLength);
+         */
 
         //setting results
-        //System.out.println("boundary: "+recognizedBoundary+" max: "+max+" avgHigh: "+avgHigh+" HS="+recognizedLengthUnitOfHighSignal+" LS="+recognizedLengthUnitOfLowSignal);
         controller.setSignalCode(output.toString());
         controller.setSpinnerUnitLength(basicUnitLength*avgForPeriodOfMs, gapUnitLength*avgForPeriodOfMs);
     }
@@ -303,6 +312,9 @@ public class SoundControl {
     }
     public void listen() {
         lengthsGapUnit.clear();
+        lengthsGapUnitAppearances.clear();
+        lengthsBasicUnit.clear();
+        lengthsBasicUnitAppearances.clear();
         output.setLength(0);
         signalGain=1;
         processCondition = true;
@@ -331,6 +343,7 @@ public class SoundControl {
     }
     public void setUnitLength(int basicUnitLengthInMS, int gapUnitLengthInMS) {
         if(basicUnitLengthInMS>0 && basicUnitLengthInMS<=1200 && gapUnitLengthInMS>0 && gapUnitLengthInMS<=1200) {
+            if(gapUnitLengthInMS<basicUnitLengthInMS) gapUnitLengthInMS=basicUnitLengthInMS;
             basicUnitLength = basicUnitLengthInMS;
             gapUnitLength = gapUnitLengthInMS;
             unitsOfSignalPreparation();
