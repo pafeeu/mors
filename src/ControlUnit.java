@@ -7,14 +7,16 @@ public class ControlUnit {
     ControlUnit() {
         gui = new GraphicalInterface(this);
         gui.disableSoundModule(true);
-        gui.miSpinnersWPM.doClick();
-        setProgressBarVal(0);
-        setProgressBarMax(100);
-
         interpreter = new Interpreter(this);
         soundControl = new SoundControl(this);
-        gui.setSpinnerVolume(30);
         gui.show();
+
+        //get default values from gui
+        gui.setSpinnerVolume(30);
+        gui.miSpinnersMS.doClick();
+        setSpinnerUnitLength(30,30);
+        setProgressBarVal(0);
+        setProgressBarMax(100);
     }
 
     public void setText(String text) {
